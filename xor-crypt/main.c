@@ -1,9 +1,7 @@
-#include <stdio.h>
-#include <string.h>
-//#include "inttypes.h"
+#include "xor-crypt.h"
 
-void encFile(FILE *inFile, int key);
-void decFile(FILE *inFile, int key);
+//#define AS_LIB
+#define AS_BUF
 
 int fixKey()
 {
@@ -24,19 +22,15 @@ int fixKey()
 
 }
 
-#define INT_ENC( in, key, out) \
-        (out) = (in) ^ ( key )
-
-#define CHAR_ENC( in, key, out) \
-(out) = (in) ^ 'N'
-
+#ifndef AS_LIB
+#define ENC_XTRA_PADDING (1024)
 
 int main (int argc, char *argv[]) {
     FILE *inFile = NULL;
     int key = 0;
     char inSel = 'v';
     
-     //printf("\ncmdline args count=%d", argc);
+    
     if(argc != 3)
     {
         printf("Undefined Usage. Correct usage: %s e/u fileName \n", argv[0]);
@@ -73,6 +67,7 @@ int main (int argc, char *argv[]) {
     
 }
 
+#endif
 
 void encFile(FILE * inFile, int key)
 {
@@ -94,6 +89,8 @@ void encFile(FILE * inFile, int key)
         printf("Filed to open output file \n");
         exit(0);
     }
+
+    #ifndef AS_BUF
     
     while(cnt < lSize)
     {
@@ -124,9 +121,86 @@ void encFile(FILE * inFile, int key)
     }
 
     fclose(encFile);
+
+    #else /*ifndef AS_BUF*/
+    {
+        uint8_t * crypt_buf = malloc(lSize + ENC_XTRA_PADDING);
+        uint8_t * inBuf = malloc(lSize);
+
+        if(inBuf != NULL)
+        {
+            fread(inBuf, 1, lSize, inFile);
+        }
+
+        int err = encBuf(inBuf,(uint64_t) lSize, crypt_buf);
+
+        {
+               fwrite(crypt_buf, 1, lSize, encFile);
+               fclose(encFile);
+        }
+    }
+    #endif
 }
 
 void decFile(FILE * inFile, int key)
 {
 
+}
+
+int encBuf(uint8_t * inBuf,uint64_t szInBuf,uint8_t * outBuf)
+{
+    uint64_t cnt = 0;
+    int key = 0, inInt, outInt;
+    int intSz = sizeof(key);
+    uint64_t offset = 0;
+
+    if(inBuf == NULL)
+    {
+        return (int) ENC_ERR_IN_BUF_NUL;
+    }
+
+    if(outBuf == NULL)
+    {
+        return (int) ENC_ERR_OUT_BUF_NUL;
+    }
+
+    key = fixKey();
+
+    while(cnt <=szInBuf)
+    {
+        //if((cnt + intSz) < szInBuf )
+        {
+            //fread(&inInt, intSz, 1, inFile);
+            memcpy(&inInt, (inBuf + offset), sizeof(inInt) );
+            INT_ENC(inInt, key, outInt);
+            //fwrite(&outInt, intSz, 1, encFile);
+            memcpy((outBuf + offset), &outInt, sizeof(outInt));
+            cnt = cnt + intSz;
+            offset = offset + intSz;
+        }
+        /* else
+        {
+            uint loop = szInBuf- cnt;
+            
+            cnt = cnt + loop;
+            
+            while(loop)
+            {
+                char in,out;
+                //fread(&in, 1, 1, inFile);
+                in = inBuf + offset;
+                out = outBuf + offset;
+                offset = offset + 1;
+                CHAR_ENC(in, key, out);
+                
+                //fwrite(&out, 1, 1, encFile);
+                loop = loop - 1;
+            }
+            
+        } */
+        
+    }
+
+
+    return ENC_NO_ERR; 
 }
