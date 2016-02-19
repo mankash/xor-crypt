@@ -136,6 +136,7 @@ void encFile(FILE * inFile, int key)
 
         {
                fwrite(crypt_buf, 1, lSize, encFile);
+                free(crypt_buf);
                fclose(encFile);
         }
     }
@@ -166,38 +167,49 @@ int encBuf(uint8_t * inBuf,uint64_t szInBuf,uint8_t * outBuf)
 
     key = fixKey();
 
-    while(cnt <=szInBuf)
+    while(cnt <szInBuf)
     {
-        //if((cnt + intSz) < szInBuf )
+        if((cnt + intSz) < szInBuf )
         {
-            //fread(&inInt, intSz, 1, inFile);
             memcpy(&inInt, (inBuf + offset), sizeof(inInt) );
             INT_ENC(inInt, key, outInt);
-            //fwrite(&outInt, intSz, 1, encFile);
             memcpy((outBuf + offset), &outInt, sizeof(outInt));
             cnt = cnt + intSz;
             offset = offset + intSz;
         }
-        /* else
+        else
         {
             uint loop = szInBuf- cnt;
+            uint rem = sizeof(int) - loop;
+            uint8_t * byteIn = (uint8_t *) &inInt;
+            uint tmpCnt = 0;
+            uint8_t zero = 0;
             
             cnt = cnt + loop;
             
             while(loop)
             {
-                char in,out;
-                //fread(&in, 1, 1, inFile);
-                in = inBuf + offset;
-                out = outBuf + offset;
-                offset = offset + 1;
-                CHAR_ENC(in, key, out);
-                
-                //fwrite(&out, 1, 1, encFile);
+                memcpy((byteIn + tmpCnt), (inBuf + offset + tmpCnt), 1);
                 loop = loop - 1;
+                tmpCnt = tmpCnt + 1;
             }
             
-        } */
+            //offset = offset + tmpCnt;
+            //tmpCnt = 0;
+            
+            while(rem)
+            {
+                memcpy((byteIn + tmpCnt ), &zero, 1);
+                rem  = rem - 1;
+                tmpCnt = tmpCnt + 1;
+            }
+            
+            INT_ENC(inInt, key, outInt);
+            memcpy((outBuf + offset), &outInt, sizeof(outInt));
+            offset = offset + tmpCnt;
+            tmpCnt = 0;
+
+        }
         
     }
 

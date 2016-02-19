@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
 
@@ -24,4 +25,3 @@ typedef enum  {
 
 #define CHAR_ENC( in, key, out) \
 (out) = (in) ^ 'N'
-
